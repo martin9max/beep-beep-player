@@ -1,0 +1,224 @@
+/* ---------------------------------------------------
+   BEEP BEEP RADIO — custom styles layered on top of Tailwind
+   Colours and fonts follow the Beep Beep Dostava site.
+   --------------------------------------------------- */
+
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(179,38,43,0.07), transparent 45%),
+    radial-gradient(circle at 88% 92%, rgba(28,32,36,0.06), transparent 45%),
+    #F1F2F0;
+}
+
+/* Hidden host for the YouTube iframe. Kept in the DOM and rendered
+   (not display:none) so the IFrame API stays reliable, just moved
+   off screen. */
+.yt-host {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  left: -9999px;
+  top: -9999px;
+}
+
+/* Brand mark + wordmark (same as the site header) */
+.bb-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: #B3262B;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font: 800 15px/1 'Figtree', sans-serif;
+  letter-spacing: .02em;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18);
+}
+.bb-name {
+  font: 700 22px/1 'Source Serif 4', Georgia, serif;
+  white-space: nowrap;
+}
+.bb-name b {
+  color: #B3262B;
+  font-weight: 700;
+}
+
+.card {
+  box-shadow: 0 24px 40px -32px rgba(28,32,36,0.5), 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #5B6168;
+}
+
+/* Status pill: red while music plays, dark during an ad */
+.status-pill {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(179,38,43,0.09);
+  color: #B3262B;
+  transition: background-color .3s ease, color .3s ease;
+}
+.status-pill.is-ad {
+  background: #1C2024;
+  color: #fff;
+}
+
+/* Status lamp */
+.lamp {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #D8DAD6;
+  box-shadow: 0 0 0 4px rgba(28,32,36,0.06);
+  transition: background-color .3s ease, box-shadow .3s ease;
+  position: relative;
+}
+.lamp.is-live {
+  background: #B3262B;
+  box-shadow: 0 0 0 4px rgba(179,38,43,0.15), 0 0 14px rgba(179,38,43,0.45);
+}
+.lamp.is-ad {
+  background: #1C2024;
+  box-shadow: 0 0 0 4px rgba(28,32,36,0.15), 0 0 14px rgba(28,32,36,0.35);
+  animation: lamp-pulse 1s ease-in-out infinite;
+}
+@keyframes lamp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Ring timer */
+.ring-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+.ring-svg {
+  width: 200px;
+  height: 200px;
+  transform: rotate(-90deg);
+}
+.ring-track {
+  fill: none;
+  stroke: #ECEDEA;
+  stroke-width: 10;
+}
+.ring-progress {
+  fill: none;
+  stroke: #B3262B;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 565.48; /* 2 * PI * 90 */
+  stroke-dashoffset: 0;
+}
+.ring-progress.no-transition { transition: none !important; }
+.ring-progress.is-ad { stroke: #1C2024; }
+
+.play-btn {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 80px;
+  height: 80px;
+  border-radius: 999px;
+  background: #B3262B;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,0.18), 0 14px 24px -12px rgba(179,38,43,0.6);
+  transition: transform .15s ease, background-color .2s ease;
+}
+.play-btn:hover { transform: scale(1.04); background: #8F1D21; }
+.play-btn:active { transform: scale(0.97); }
+
+/* Volume slider */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  border-radius: 999px;
+  background: #D8DAD6;
+  outline: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #B3262B;
+  cursor: pointer;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgba(28,32,36,0.15), 0 2px 6px rgba(0,0,0,0.15);
+}
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #B3262B;
+  cursor: pointer;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgba(28,32,36,0.15), 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Playback rate buttons */
+.rate-btn {
+  font-family: 'Figtree', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: #F1F2F0;
+  border: 1px solid #D8DAD6;
+  color: #5B6168;
+  transition: all .15s ease;
+}
+.rate-btn:hover {
+  border-color: #B3262B;
+  color: #1C2024;
+}
+.rate-btn.is-active {
+  background: #B3262B;
+  border-color: #B3262B;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Test panel: interval input + apply button */
+.test-input {
+  flex: 1;
+  background: #F1F2F0;
+  border: 1px solid #D8DAD6;
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #1C2024;
+  font-family: 'Figtree', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+}
+.test-input:focus {
+  border-color: #B3262B;
+  box-shadow: 0 0 0 3px rgba(179,38,43,0.15);
+}
+.apply-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: #1C2024;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background-color .15s ease;
+}
+.apply-btn:hover { background: #B3262B; }
+.apply-btn:active { filter: brightness(0.95); }

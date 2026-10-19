@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F1F2F0">
+<title>Beep Beep Radio</title>
+
+<!-- Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:     '#1C2024',
+          paper:   '#F1F2F0',
+          line:    '#D8DAD6',
+          mute:    '#5B6168',
+          red:     '#B3262B',
+          redDark: '#8F1D21'
+        },
+        fontFamily: {
+          display: ['"Source Serif 4"', 'Georgia', 'serif'],
+          body: ['"Figtree"', 'system-ui', 'sans-serif']
+        }
+      }
+    }
+  }
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-paper text-ink font-body min-h-screen flex items-center justify-center px-4 py-10">
+
+  <!-- Hidden YouTube host. Not display:none on purpose — the IFrame API
+       needs a real, rendered element to play reliably. It's pushed off-screen instead. -->
+  <div class="yt-host">
+    <div id="yt-player"></div>
+  </div>
+
+  <main class="w-full max-w-md">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <div class="flex items-center gap-3">
+        <span class="bb-mark" aria-hidden="true">BB</span>
+        <div>
+          <p class="bb-name">Beep Beep <b>Radio</b></p>
+          <p class="text-[11px] text-mute tracking-widest uppercase font-semibold mt-1">Muzika i reklame u lokalu</p>
+        </div>
+      </div>
+      <div id="lamp" class="lamp" title="Status">
+        <span class="lamp-dot"></span>
+      </div>
+    </div>
+
+    <!-- Console card -->
+    <div class="card bg-white rounded-3xl border border-line p-8">
+
+      <!-- Status row -->
+      <div class="flex items-center justify-between mb-6">
+        <span id="statusLabel" class="status-pill">Muzika</span>
+        <span id="countdownLabel" class="text-sm text-mute font-semibold tabular-nums">3:00</span>
+      </div>
+
+      <!-- Ring + play button -->
+      <div class="flex justify-center mb-8">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 200 200" class="ring-svg">
+            <circle cx="100" cy="100" r="90" class="ring-track" />
+            <circle cx="100" cy="100" r="90" class="ring-progress" id="ringProgress" />
+          </svg>
+          <button id="playBtn" class="play-btn" aria-label="Play / Pause">
+            <svg id="iconPlay" viewBox="0 0 24 24" class="w-8 h-8 fill-current translate-x-[2px]"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="iconPause" viewBox="0 0 24 24" class="w-8 h-8 fill-current hidden"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Now playing -->
+      <p class="text-center text-sm text-mute mb-8" id="nowPlaying">Klikni Play da započneš emitovanje</p>
+
+      <!-- Volume -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <label for="volumeSlider" class="field-label">Jačina zvuka</label>
+          <span id="volumeValue" class="text-xs font-bold text-ink">70%</span>
+        </div>
+        <input type="range" id="volumeSlider" min="0" max="100" value="70" class="w-full slider">
+      </div>
+
+      <!-- Playback rate -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="field-label">Brzina reprodukcije</label>
+          <span id="rateValue" class="text-xs font-bold text-ink">1.00x</span>
+        </div>
+        <div class="grid grid-cols-5 gap-2" id="rateButtons">
+          <button data-rate="0.75" class="rate-btn">0.75x</button>
+          <button data-rate="1"    class="rate-btn is-active">1x</button>
+          <button data-rate="1.25" class="rate-btn">1.25x</button>
+          <button data-rate="1.5"  class="rate-btn">1.5x</button>
+          <button data-rate="2"    class="rate-btn">2x</button>
+        </div>
+      </div>
+
+      <!-- Test panel: adjust ad interval on the fly while testing -->
+      <div class="mt-6 pt-5 border-t border-line">
+        <label class="field-label block mb-2">Interval reklame (test režim)</label>
+        <div class="flex gap-2">
+          <input type="number" id="intervalInput" min="5" step="1" value="180" class="test-input">
+          <span class="self-center text-xs text-mute">sek</span>
+          <button id="applyIntervalBtn" class="apply-btn">Primeni</button>
+        </div>
+        <p class="text-[11px] text-mute mt-2" id="intervalHint">Trenutni interval: 180 sek (3 min)</p>
+      </div>
+
+    </div>
+
+    <p class="text-center text-[11px] text-mute mt-6 leading-relaxed">
+      Svakih 3 minuta muzika se stišava na 20%, a reklama se pušta na 100% jačine.
+    </p>
+  </main>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
