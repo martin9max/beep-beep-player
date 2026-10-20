@@ -1,5 +1,5 @@
 /* =====================================================================
-   BEEP BEEP RADIO — Auto-ducking player (ista logika kao SIGNAL)
+   BEEP BEEP DOSTAVA — Auto-ducking player (ista logika kao SIGNAL)
    ---------------------------------------------------------------------
    - Background music comes from a YouTube video/playlist, played
      through the YouTube IFrame Player API (video is hidden off-screen,
@@ -8,6 +8,9 @@
      the YouTube volume is ducked down to DUCK_VOLUME_PERCENT and the
      ad plays at full volume. When the ad ends, the music volume is
      restored and the cycle starts again.
+   - While the music plays, a Beep Beep van drives one lap around the
+     ring. When it reaches the pin it honks and the ad plays; its text
+     is shown on a "dostavnica" (delivery slip).
    - If the configured YouTube video refuses to play in an embedded
      player (owner-restricted — common on reuploaded mixes with
      commercial music), the player automatically falls back to a
@@ -18,7 +21,7 @@
 // 1. CONFIG — edit these to change behaviour
 // ---------------------------------------------------------------------
 
-// Your afro house summer mix pick:
+// Afro house summer mix:
 // https://www.youtube.com/watch?v=3G8f9miKY2A&list=RD3G8f9miKY2A&start_radio=1
 const PRIMARY_VIDEO_ID = '3G8f9miKY2A';
 const PRIMARY_LIST_ID  = 'RD3G8f9miKY2A';
@@ -31,9 +34,12 @@ const FALLBACK_VIDEO_ID = 'D4MdHQOILdw';
 const FALLBACK_LIST_ID  = null;
 
 // How often an ad interrupts the music (in ms). 3 minutes = 180000.
-// This is a `let`, not `const` — the test panel in the UI changes it
-// live while you're trying the app out (see section 11 below).
+// For testing, open the page with ?interval=10 (seconds) in the URL.
 let AD_INTERVAL_MS = 3 * 60 * 1000;
+const urlInterval = Number(new URLSearchParams(location.search).get('interval'));
+if (Number.isFinite(urlInterval) && urlInterval >= 5) {
+  AD_INTERVAL_MS = urlInterval * 1000;
+}
 
 // Music volume while an ad is playing (0-100).
 const DUCK_VOLUME_PERCENT = 20;
@@ -51,6 +57,19 @@ const AD_FILES = [
   'ad8.m4a',
 ];
 
+// What each ad says, shown on the delivery slip while it plays.
+// Same order as AD_FILES.
+const AD_TEXTS = [
+  'Gladni ste, a ne stižete do restorana? Topao obrok iz partnerskih restorana, pravo na vrata.',
+  'Fali hleb, mleko ili sok? Ne morate da izlazite. Namirnice i piće iz marketa do vaše kuće.',
+  'Rođendan, godišnjica, ili samo želite nekoga da obradujete? Buket ili saksija iz cvećare.',
+  'Živite u nekom selu oko Negotina? Nema problema. Stižemo i do vas.',
+  'Izaberete lokal i stavke iz menija, upišete adresu i telefon. Mi preuzimamo, vozimo i javljamo kad krećemo.',
+  'Dok vi sedite ovde, mi smo već na putu. Hrana, piće, namirnice i cveće.',
+  'Kiša, vrućina, gužva? Ostanite gde jeste. Donosimo ono što vam treba, do samih vrata.',
+  'Jedan klik, jedan poziv, i paket je na putu. Kad čujete beep beep, to smo mi.',
+];
+
 // ---------------------------------------------------------------------
 // 2. STATE
 // ---------------------------------------------------------------------
@@ -63,9 +82,9 @@ let isPlaying = false;
 let isAdPlaying = false;
 
 let userVolume = 70;     // the volume the user has chosen (0-100)
-let playbackRate = 1;    // shared between music and ads
 
 let lastAdIndex = -1;
+let deliveryCount = 0;
 const adAudioEl = new Audio();
 adAudioEl.preload = 'auto';
 
@@ -73,28 +92,36 @@ let nextAdAt = null;       // Date.now() timestamp for the next scheduled ad
 let remainingMsOnPause = null;
 let adSchedulerTimeout = null;
 let countdownInterval = null;
+let serviceInterval = null;
+let activeService = 0;
 
 // ---------------------------------------------------------------------
 // 3. DOM REFERENCES
 // ---------------------------------------------------------------------
 
-const playBtn         = document.getElementById('playBtn');
-const iconPlay         = document.getElementById('iconPlay');
-const iconPause        = document.getElementById('iconPause');
-const statusLabel      = document.getElementById('statusLabel');
-const countdownLabel   = document.getElementById('countdownLabel');
-const ringProgress     = document.getElementById('ringProgress');
-const lamp             = document.getElementById('lamp');
-const nowPlaying       = document.getElementById('nowPlaying');
-const volumeSlider     = document.getElementById('volumeSlider');
-const volumeValue      = document.getElementById('volumeValue');
-const rateButtons      = document.querySelectorAll('.rate-btn');
-const rateValue        = document.getElementById('rateValue');
-const intervalInput    = document.getElementById('intervalInput');
-const applyIntervalBtn = document.getElementById('applyIntervalBtn');
-const intervalHint     = document.getElementById('intervalHint');
+const playBtn        = document.getElementById('playBtn');
+const iconPlay       = document.getElementById('iconPlay');
+const iconPause      = document.getElementById('iconPause');
+const statusLabel    = document.getElementById('statusLabel');
+const countdownLabel = document.getElementById('countdownLabel');
+const ringProgress   = document.getElementById('ringProgress');
+const lamp           = document.getElementById('lamp');
+const nowPlaying     = document.getElementById('nowPlaying');
+const volumeSlider   = document.getElementById('volumeSlider');
+const volumeValue    = document.getElementById('volumeValue');
+const van            = document.getElementById('van');
+const services       = document.getElementById('services');
+const serviceEls     = document.querySelectorAll('.service');
+const adSlip         = document.getElementById('adSlip');
+const adSlipText     = document.getElementById('adSlipText');
+const adSlipNo       = document.getElementById('adSlipNo');
+const adSlipBar      = document.getElementById('adSlipBar');
 
 const RING_CIRCUMFERENCE = 565.48;
+const RING_CENTER = 110;   // centre of .ring-wrap (220px)
+const RING_RADIUS = 90;
+
+const MSG_DRIVING = 'Muzika svira, kombi je na putu';
 
 adAudioEl.addEventListener('error', () => {
   if (!adAudioEl.src) return;
@@ -147,12 +174,11 @@ function initYouTubePlayer(videoId, listId) {
 function onPlayerReady() {
   ytReady = true;
   ytPlayer.setVolume(isAdPlaying ? DUCK_VOLUME_PERCENT : userVolume);
-  ytPlayer.setPlaybackRate(playbackRate);
 
   if (usedFallback) {
-    nowPlaying.textContent = 'Originalni mix nije mogao da se pusti (embed ograničen) — koristi se rezervna muzika.';
+    nowPlaying.textContent = 'Originalni mix nije mogao da se pusti (embed ograničen), koristi se rezervna muzika.';
   } else if (!isPlaying) {
-    nowPlaying.textContent = 'Klikni Play da započneš emitovanje';
+    nowPlaying.textContent = 'Klikni Play i kombi kreće';
   }
 
   // If the user had already hit Play before a fallback swap happened,
@@ -184,7 +210,7 @@ function onPlayerError(event) {
   if (isEmbedIssue && !usedFallback) {
     usedFallback = true;
     console.warn('Prebacujem na rezervnu muziku zbog greške', event.data);
-    nowPlaying.textContent = 'Tvoj mix ne dozvoljava embed — prebacujem na rezervnu pozadinsku muziku…';
+    nowPlaying.textContent = 'Mix ne dozvoljava embed, prebacujem na rezervnu muziku…';
     ytReady = false;
     try { ytPlayer.destroy(); } catch (e) { /* ignore */ }
     initYouTubePlayer(FALLBACK_VIDEO_ID, FALLBACK_LIST_ID);
@@ -201,7 +227,7 @@ function onPlayerError(event) {
 setTimeout(() => {
   if (!ytReady) {
     console.warn('YouTube plejer se nije inicijalizovao u razumnom roku.');
-    nowPlaying.textContent = 'Plejer se ne učitava. Proveri da nemaš ad-blocker/ekstenziju koja blokira YouTube embed (probaj u Incognito bez ekstenzija), i proveri konzolu (F12) za greške.';
+    nowPlaying.textContent = 'Plejer se ne učitava. Proveri da nemaš ad-blocker koji blokira YouTube (probaj u Incognito prozoru).';
   }
 }, 8000);
 
@@ -222,7 +248,7 @@ function startEverything() {
   isPlaying = true;
   iconPlay.classList.add('hidden');
   iconPause.classList.remove('hidden');
-  nowPlaying.textContent = 'Emitovanje uživo — muzika u pozadini';
+  nowPlaying.textContent = MSG_DRIVING;
 
   ytPlayer.setVolume(userVolume);
   ytPlayer.playVideo();
@@ -238,7 +264,7 @@ function pauseEverything() {
   isPlaying = false;
   iconPlay.classList.remove('hidden');
   iconPause.classList.add('hidden');
-  nowPlaying.textContent = 'Pauzirano';
+  nowPlaying.textContent = 'Pauzirano, kombi je parkiran';
 
   ytPlayer.pauseVideo();
   if (!adAudioEl.paused) adAudioEl.pause();
@@ -258,7 +284,6 @@ function pauseEverything() {
 
 function scheduleNextAd(delayMs) {
   nextAdAt = Date.now() + delayMs;
-  startRing(delayMs);
   startCountdown();
 
   clearTimeout(adSchedulerTimeout);
@@ -271,17 +296,17 @@ function playAd() {
 
   isAdPlaying = true;
   setAdLive();
-  statusLabel.textContent = 'Reklama';
-  nowPlaying.textContent = 'Reklama u toku…';
+  statusLabel.textContent = 'Beep beep!';
+  nowPlaying.textContent = 'Kombi je stigao, poruka za vas';
 
   // Duck the music.
   if (ytReady) ytPlayer.setVolume(DUCK_VOLUME_PERCENT);
 
   const index = pickNextAdIndex();
   const file = AD_FILES[index];
+  showSlip(index);
   adAudioEl.src = `assets/audio/${encodeURIComponent(file)}`;
   adAudioEl.volume = 1; // ad plays at 100%
-  adAudioEl.playbackRate = playbackRate;
 
   console.log('Puštam reklamu:', file);
 
@@ -301,8 +326,8 @@ function playAd() {
 
 function onAdFinished() {
   isAdPlaying = false;
-  statusLabel.textContent = 'Muzika';
-  nowPlaying.textContent = 'Emitovanje uživo — muzika u pozadini';
+  hideSlip();
+  nowPlaying.textContent = MSG_DRIVING;
   setLive();
 
   // Restore the music to the user's chosen volume.
@@ -323,18 +348,71 @@ function pickNextAdIndex() {
 }
 
 // ---------------------------------------------------------------------
-// 7. RING TIMER + COUNTDOWN LABEL
+// 7. DELIVERY SLIP + SERVICES
 // ---------------------------------------------------------------------
 
-function startRing(durationMs) {
-  ringProgress.classList.add('no-transition');
-  ringProgress.style.strokeDashoffset = '0';
-  // force reflow so the next style change is treated as a new transition
-  void ringProgress.offsetWidth;
-  ringProgress.classList.remove('no-transition');
-  ringProgress.style.transition = `stroke-dashoffset ${durationMs / 1000}s linear`;
-  ringProgress.style.strokeDashoffset = String(RING_CIRCUMFERENCE);
+function showSlip(index) {
+  deliveryCount += 1;
+  adSlipNo.textContent = `#${String(deliveryCount).padStart(3, '0')}`;
+  adSlipText.textContent = AD_TEXTS[index] || 'Beep Beep Dostava, Negotin i okolna sela.';
+  adSlipBar.style.width = '0%';
+  services.classList.add('hidden');
+  adSlip.classList.remove('hidden');
 }
+
+function hideSlip() {
+  adSlip.classList.add('hidden');
+  services.classList.remove('hidden');
+}
+
+function startServiceCycle() {
+  clearInterval(serviceInterval);
+  highlightService(activeService);
+  serviceInterval = setInterval(() => {
+    activeService = (activeService + 1) % serviceEls.length;
+    highlightService(activeService);
+  }, 4000);
+}
+
+function stopServiceCycle() {
+  clearInterval(serviceInterval);
+  serviceEls.forEach((el) => el.classList.remove('is-active'));
+}
+
+function highlightService(i) {
+  serviceEls.forEach((el, n) => el.classList.toggle('is-active', n === i));
+}
+
+// ---------------------------------------------------------------------
+// 8. ROUTE RING + VAN + COUNTDOWN LABEL
+// ---------------------------------------------------------------------
+
+// How much of the lap the van has driven (0 = start, 1 = at the pin).
+function routeFraction() {
+  if (isAdPlaying) return 1;
+  if (nextAdAt === null) return 0;
+  const remaining = isPlaying
+    ? nextAdAt - Date.now()
+    : (remainingMsOnPause !== null ? remainingMsOnPause : AD_INTERVAL_MS);
+  return Math.min(1, Math.max(0, 1 - remaining / AD_INTERVAL_MS));
+}
+
+function renderRoute() {
+  const f = routeFraction();
+  ringProgress.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - f));
+
+  const angle = f * Math.PI * 2;
+  const x = RING_CENTER + RING_RADIUS * Math.sin(angle) - van.offsetWidth / 2;
+  const y = RING_CENTER - RING_RADIUS * Math.cos(angle) - van.offsetHeight / 2;
+  van.style.transform = `translate(${x}px, ${y}px) rotate(${angle}rad)`;
+
+  if (isAdPlaying && adAudioEl.duration) {
+    adSlipBar.style.width = `${(adAudioEl.currentTime / adAudioEl.duration) * 100}%`;
+  }
+
+  requestAnimationFrame(renderRoute);
+}
+requestAnimationFrame(renderRoute);
 
 function startCountdown() {
   clearInterval(countdownInterval);
@@ -342,23 +420,31 @@ function startCountdown() {
   countdownInterval = setInterval(updateCountdownLabel, 1000);
 }
 
-function updateCountdownLabel() {
-  const remaining = Math.max(0, nextAdAt - Date.now());
-  const totalSeconds = Math.ceil(remaining / 1000);
+function formatMs(ms) {
+  const totalSeconds = Math.ceil(Math.max(0, ms) / 1000);
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
-  countdownLabel.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+function updateCountdownLabel() {
+  countdownLabel.textContent = formatMs(nextAdAt - Date.now());
+}
+countdownLabel.textContent = formatMs(AD_INTERVAL_MS);
+
 // ---------------------------------------------------------------------
-// 8. LAMP / RING COLOUR STATE
+// 9. LAMP / RING / VAN STATE
 // ---------------------------------------------------------------------
 
 function setLive() {
+  statusLabel.textContent = 'Na putu';
   statusLabel.classList.remove('is-ad');
   lamp.classList.remove('is-ad');
   lamp.classList.add('is-live');
   ringProgress.classList.remove('is-ad');
+  van.classList.remove('is-honking');
+  van.classList.add('is-driving');
+  startServiceCycle();
 }
 
 function setAdLive() {
@@ -366,15 +452,21 @@ function setAdLive() {
   lamp.classList.remove('is-live');
   lamp.classList.add('is-ad');
   ringProgress.classList.add('is-ad');
+  van.classList.remove('is-driving');
+  van.classList.add('is-honking');
+  stopServiceCycle();
 }
 
 function setOff() {
+  statusLabel.textContent = 'Parkiran';
   statusLabel.classList.remove('is-ad');
   lamp.classList.remove('is-live', 'is-ad');
+  van.classList.remove('is-driving', 'is-honking');
+  stopServiceCycle();
 }
 
 // ---------------------------------------------------------------------
-// 9. VOLUME CONTROL
+// 10. VOLUME CONTROL
 // ---------------------------------------------------------------------
 
 volumeSlider.addEventListener('input', (e) => {
@@ -383,50 +475,5 @@ volumeSlider.addEventListener('input', (e) => {
   // Only push it live if we're not mid-ad (ad always stays at 100%).
   if (ytReady && !isAdPlaying) {
     ytPlayer.setVolume(userVolume);
-  }
-});
-
-// ---------------------------------------------------------------------
-// 10. PLAYBACK RATE CONTROL
-// ---------------------------------------------------------------------
-
-rateButtons.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    playbackRate = Number(btn.dataset.rate);
-    rateValue.textContent = `${playbackRate.toFixed(2)}x`;
-
-    rateButtons.forEach((b) => b.classList.remove('is-active'));
-    btn.classList.add('is-active');
-
-    if (ytReady) ytPlayer.setPlaybackRate(playbackRate);
-    adAudioEl.playbackRate = playbackRate;
-  });
-});
-
-// ---------------------------------------------------------------------
-// 11. TEST PANEL — change the ad interval on the fly (e.g. 10s while
-//     testing, instead of waiting 3 real minutes each time).
-// ---------------------------------------------------------------------
-
-applyIntervalBtn.addEventListener('click', () => {
-  const seconds = Number(intervalInput.value);
-
-  if (!Number.isFinite(seconds) || seconds < 5) {
-    intervalHint.textContent = 'Unesi broj sekundi, minimum 5.';
-    return;
-  }
-
-  AD_INTERVAL_MS = seconds * 1000;
-  intervalHint.textContent = seconds >= 60
-    ? `Trenutni interval: ${seconds} sek (${(seconds / 60).toFixed(1)} min)`
-    : `Trenutni interval: ${seconds} sek`;
-
-  // If music is currently playing (and no ad is running right now),
-  // restart the countdown immediately with the new interval so you
-  // don't have to wait out the old one first.
-  if (isPlaying && !isAdPlaying) {
-    clearTimeout(adSchedulerTimeout);
-    clearInterval(countdownInterval);
-    scheduleNextAd(AD_INTERVAL_MS);
   }
 });

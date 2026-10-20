@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#F1F2F0">
-<title>Beep Beep Radio</title>
+<meta name="description" content="Beep Beep Dostava Negotin: hrana, piće, namirnice i cveće do vašeg praga.">
+<title>Beep Beep Dostava</title>
 
 <!-- Tailwind CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -50,8 +51,8 @@
       <div class="flex items-center gap-3">
         <span class="bb-mark" aria-hidden="true">BB</span>
         <div>
-          <p class="bb-name">Beep Beep <b>Radio</b></p>
-          <p class="text-[11px] text-mute tracking-widest uppercase font-semibold mt-1">Muzika i reklame u lokalu</p>
+          <p class="bb-name">Beep Beep <b>Dostava</b></p>
+          <p class="text-[11px] text-mute tracking-widest uppercase font-semibold mt-1">Negotin i okolna sela</p>
         </div>
       </div>
       <div id="lamp" class="lamp" title="Status">
@@ -64,18 +65,42 @@
 
       <!-- Status row -->
       <div class="flex items-center justify-between mb-6">
-        <span id="statusLabel" class="status-pill">Muzika</span>
-        <span id="countdownLabel" class="text-sm text-mute font-semibold tabular-nums">3:00</span>
+        <span id="statusLabel" class="status-pill">Spremni</span>
+        <span class="text-right leading-tight">
+          <span class="block text-[10px] uppercase tracking-widest text-mute font-bold">Sledeća pošiljka</span>
+          <span id="countdownLabel" class="text-sm text-ink font-bold tabular-nums">3:00</span>
+        </span>
       </div>
 
-      <!-- Ring + play button -->
-      <div class="flex justify-center mb-8">
+      <!-- Route ring: the van drives one lap between two ads -->
+      <div class="flex justify-center mb-6">
         <div class="ring-wrap">
-          <svg viewBox="0 0 200 200" class="ring-svg">
+          <svg viewBox="0 0 200 200" class="ring-svg" aria-hidden="true">
             <circle cx="100" cy="100" r="90" class="ring-track" />
+            <circle cx="100" cy="100" r="90" class="ring-lane" />
             <circle cx="100" cy="100" r="90" class="ring-progress" id="ringProgress" />
           </svg>
-          <button id="playBtn" class="play-btn" aria-label="Play / Pause">
+
+          <!-- Destination pin at the top of the lap -->
+          <span class="route-pin" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+          </span>
+
+          <!-- The van -->
+          <span id="van" class="van" aria-hidden="true">
+            <span class="van-honk">beep beep!</span>
+            <svg viewBox="0 0 48 28" class="van-svg">
+              <path class="van-body" d="M3 6a3 3 0 0 1 3-3h22a2 2 0 0 1 2 2v3h7.5a3 3 0 0 1 2.4 1.2l4.5 6A3 3 0 0 1 45 17v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <path class="van-window" d="M32 10h5.3a1 1 0 0 1 .8.4l3.4 4.6H32z"/>
+              <text x="15.5" y="15.5" class="van-text">BB</text>
+              <circle cx="13" cy="23" r="4" class="van-wheel"/>
+              <circle cx="36" cy="23" r="4" class="van-wheel"/>
+              <circle cx="13" cy="23" r="1.5" class="van-hub"/>
+              <circle cx="36" cy="23" r="1.5" class="van-hub"/>
+            </svg>
+          </span>
+
+          <button id="playBtn" class="play-btn" aria-label="Pokreni / pauziraj">
             <svg id="iconPlay" viewBox="0 0 24 24" class="w-8 h-8 fill-current translate-x-[2px]"><path d="M8 5v14l11-7z"/></svg>
             <svg id="iconPause" viewBox="0 0 24 24" class="w-8 h-8 fill-current hidden"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
           </button>
@@ -83,47 +108,48 @@
       </div>
 
       <!-- Now playing -->
-      <p class="text-center text-sm text-mute mb-8" id="nowPlaying">Klikni Play da započneš emitovanje</p>
+      <p class="text-center text-sm text-mute mb-6" id="nowPlaying">Klikni Play i kombi kreće</p>
+
+      <!-- What we deliver (shown while music plays) -->
+      <div id="services" class="grid grid-cols-3 gap-2 mb-6">
+        <div class="service" data-service="0">
+          <svg viewBox="0 0 24 24"><path d="M4 11h16a8 8 0 0 1-16 0zm-1 9h18v2H3zM9 3c0 1.5 1 1.8 1 3.3S9 8 9 8M13 3c0 1.5 1 1.8 1 3.3S13 8 13 8"/></svg>
+          <span>Hrana</span>
+        </div>
+        <div class="service" data-service="1">
+          <svg viewBox="0 0 24 24"><path d="M5 8h14l-1.4 11.2A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.8zM9 8V6a3 3 0 0 1 6 0v2"/></svg>
+          <span>Namirnice</span>
+        </div>
+        <div class="service" data-service="2">
+          <svg viewBox="0 0 24 24"><path d="M12 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 0v13M12 15c-3 0-5-2-5-5 3 0 5 2 5 5zm0 2c3 0 5-2 5-5-3 0-5 2-5 5z"/></svg>
+          <span>Cveće</span>
+        </div>
+      </div>
+
+      <!-- Delivery slip (shown while an ad plays) -->
+      <div id="adSlip" class="slip hidden" aria-live="polite">
+        <div class="slip-head">
+          <span>Dostavnica</span>
+          <span id="adSlipNo">#001</span>
+        </div>
+        <p id="adSlipText" class="slip-text"></p>
+        <div class="slip-bar"><span id="adSlipBar"></span></div>
+      </div>
 
       <!-- Volume -->
-      <div class="mb-6">
+      <div>
         <div class="flex items-center justify-between mb-2">
-          <label for="volumeSlider" class="field-label">Jačina zvuka</label>
+          <label for="volumeSlider" class="field-label">Jačina muzike</label>
           <span id="volumeValue" class="text-xs font-bold text-ink">70%</span>
         </div>
         <input type="range" id="volumeSlider" min="0" max="100" value="70" class="w-full slider">
       </div>
 
-      <!-- Playback rate -->
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <label class="field-label">Brzina reprodukcije</label>
-          <span id="rateValue" class="text-xs font-bold text-ink">1.00x</span>
-        </div>
-        <div class="grid grid-cols-5 gap-2" id="rateButtons">
-          <button data-rate="0.75" class="rate-btn">0.75x</button>
-          <button data-rate="1"    class="rate-btn is-active">1x</button>
-          <button data-rate="1.25" class="rate-btn">1.25x</button>
-          <button data-rate="1.5"  class="rate-btn">1.5x</button>
-          <button data-rate="2"    class="rate-btn">2x</button>
-        </div>
-      </div>
-
-      <!-- Test panel: adjust ad interval on the fly while testing -->
-      <div class="mt-6 pt-5 border-t border-line">
-        <label class="field-label block mb-2">Interval reklame (test režim)</label>
-        <div class="flex gap-2">
-          <input type="number" id="intervalInput" min="5" step="1" value="180" class="test-input">
-          <span class="self-center text-xs text-mute">sek</span>
-          <button id="applyIntervalBtn" class="apply-btn">Primeni</button>
-        </div>
-        <p class="text-[11px] text-mute mt-2" id="intervalHint">Trenutni interval: 180 sek (3 min)</p>
-      </div>
-
     </div>
 
-    <p class="text-center text-[11px] text-mute mt-6 leading-relaxed">
-      Svakih 3 minuta muzika se stišava na 20%, a reklama se pušta na 100% jačine.
+    <p class="text-center text-xs text-mute mt-6 leading-relaxed">
+      <b class="text-ink">Hrana, piće, namirnice i cveće</b> do vašeg praga.<br>
+      Kad čujete <span class="text-red font-bold">beep beep</span>, to smo mi.
     </p>
   </main>
 
