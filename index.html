@@ -145,6 +145,26 @@
         <input type="range" id="volumeSlider" min="0" max="100" value="70" class="w-full slider">
       </div>
 
+      <!-- Ad interval: how long one lap of the van takes -->
+      <div class="mt-6 pt-5 border-t border-line">
+        <div class="flex items-center justify-between mb-2">
+          <label class="field-label">Reklama na svakih</label>
+          <span id="intervalValue" class="text-xs font-bold text-ink">3 min</span>
+        </div>
+        <div class="grid grid-cols-4 gap-2 mb-2" id="intervalButtons">
+          <button data-seconds="60"  class="chip">1 min</button>
+          <button data-seconds="180" class="chip is-active">3 min</button>
+          <button data-seconds="300" class="chip">5 min</button>
+          <button data-seconds="600" class="chip">10 min</button>
+        </div>
+        <div class="flex gap-2">
+          <input type="number" id="intervalInput" min="5" step="1" placeholder="Svoje vreme" class="test-input" aria-label="Interval u sekundama">
+          <span class="self-center text-xs text-mute">sek</span>
+          <button id="applyIntervalBtn" class="apply-btn">Primeni</button>
+        </div>
+        <p class="text-[11px] text-mute mt-2" id="intervalHint">Izaberi koliko često kombi stiže sa reklamom.</p>
+      </div>
+
     </div>
 
     <p class="text-center text-xs text-mute mt-6 leading-relaxed">

@@ -34,8 +34,14 @@ const FALLBACK_VIDEO_ID = 'D4MdHQOILdw';
 const FALLBACK_LIST_ID  = null;
 
 // How often an ad interrupts the music (in ms). 3 minutes = 180000.
-// For testing, open the page with ?interval=10 (seconds) in the URL.
+// Changed live from the interval panel (section 11), remembered on this
+// device, and can be forced with ?interval=10 (seconds) in the URL.
+const INTERVAL_STORAGE_KEY = 'bb-ad-interval-sec';
 let AD_INTERVAL_MS = 3 * 60 * 1000;
+try {
+  const saved = Number(localStorage.getItem(INTERVAL_STORAGE_KEY));
+  if (Number.isFinite(saved) && saved >= 5) AD_INTERVAL_MS = saved * 1000;
+} catch (e) { /* storage unavailable — keep default */ }
 const urlInterval = Number(new URLSearchParams(location.search).get('interval'));
 if (Number.isFinite(urlInterval) && urlInterval >= 5) {
   AD_INTERVAL_MS = urlInterval * 1000;
@@ -477,3 +483,66 @@ volumeSlider.addEventListener('input', (e) => {
     ytPlayer.setVolume(userVolume);
   }
 });
+
+// ---------------------------------------------------------------------
+// 11. AD INTERVAL PANEL — preset chips (1/3/5/10 min) or own seconds.
+// ---------------------------------------------------------------------
+
+const intervalButtons  = document.querySelectorAll('#intervalButtons .chip');
+const intervalInput    = document.getElementById('intervalInput');
+const applyIntervalBtn = document.getElementById('applyIntervalBtn');
+const intervalValue    = document.getElementById('intervalValue');
+const intervalHint     = document.getElementById('intervalHint');
+
+function formatInterval(seconds) {
+  if (seconds % 60 === 0) return `${seconds / 60} min`;
+  if (seconds > 60) return `${Math.floor(seconds / 60)} min ${seconds % 60} sek`;
+  return `${seconds} sek`;
+}
+
+function renderIntervalPanel() {
+  const seconds = Math.round(AD_INTERVAL_MS / 1000);
+  intervalValue.textContent = formatInterval(seconds);
+  intervalButtons.forEach((b) => {
+    b.classList.toggle('is-active', Number(b.dataset.seconds) === seconds);
+  });
+}
+
+function setAdInterval(seconds) {
+  AD_INTERVAL_MS = seconds * 1000;
+  try { localStorage.setItem(INTERVAL_STORAGE_KEY, String(seconds)); } catch (e) { /* ignore */ }
+  renderIntervalPanel();
+  intervalHint.textContent = `Kombi sada stiže sa reklamom na svakih ${formatInterval(seconds)}.`;
+
+  // Restart the lap right away with the new interval (unless an ad is
+  // playing now — the new interval then starts after it ends).
+  if (isPlaying && !isAdPlaying) {
+    clearTimeout(adSchedulerTimeout);
+    clearInterval(countdownInterval);
+    scheduleNextAd(AD_INTERVAL_MS);
+  } else if (!isPlaying) {
+    remainingMsOnPause = null;
+    nextAdAt = null;
+    countdownLabel.textContent = formatMs(AD_INTERVAL_MS);
+  }
+}
+
+intervalButtons.forEach((btn) => {
+  btn.addEventListener('click', () => setAdInterval(Number(btn.dataset.seconds)));
+});
+
+applyIntervalBtn.addEventListener('click', () => {
+  const seconds = Math.round(Number(intervalInput.value));
+  if (!Number.isFinite(seconds) || seconds < 5) {
+    intervalHint.textContent = 'Unesi broj sekundi, najmanje 5.';
+    return;
+  }
+  setAdInterval(seconds);
+  intervalInput.value = '';
+});
+
+intervalInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') applyIntervalBtn.click();
+});
+
+renderIntervalPanel();

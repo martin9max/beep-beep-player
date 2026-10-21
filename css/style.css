@@ -333,6 +333,56 @@ body {
   box-shadow: 0 0 0 1px rgba(28,32,36,0.15), 0 2px 6px rgba(0,0,0,0.15);
 }
 
+/* ---------- Ad interval panel ---------- */
+.chip {
+  font-family: 'Figtree', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: #F1F2F0;
+  border: 1px solid #D8DAD6;
+  color: #5B6168;
+  transition: all .15s ease;
+}
+.chip:hover {
+  border-color: #B3262B;
+  color: #1C2024;
+}
+.chip.is-active {
+  background: #B3262B;
+  border-color: #B3262B;
+  color: #fff;
+  font-weight: 700;
+}
+.test-input {
+  flex: 1;
+  min-width: 0;
+  background: #F1F2F0;
+  border: 1px solid #D8DAD6;
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #1C2024;
+  font-family: 'Figtree', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+}
+.test-input:focus {
+  border-color: #B3262B;
+  box-shadow: 0 0 0 3px rgba(179,38,43,0.15);
+}
+.apply-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: #1C2024;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background-color .15s ease;
+}
+.apply-btn:hover { background: #B3262B; }
+
 @media (prefers-reduced-motion: reduce) {
   .is-driving .van-svg, .is-honking .van-svg, .is-honking .van-honk, .slip { animation: none; }
 }
